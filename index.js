@@ -184,8 +184,7 @@ Parser.prototype._flush = function(done) {
         for (var namespace in translationsHash) {
 
             // get previous version of the files
-            var namespacePath    = path.resolve( localeBase, namespace + '.json' );
-            var namespaceOldPath = path.resolve( localeBase, namespace + '_old.json' );
+            var namespacePath    = path.resolve( localeBase, namespace + '.resjson' );
 
             if ( fs.existsSync( namespacePath ) ) {
                 try {
@@ -200,31 +199,8 @@ Parser.prototype._flush = function(done) {
                 currentTranslations = {};
             }
 
-            if ( fs.existsSync( namespaceOldPath ) ) {
-                try {
-                    oldTranslations = JSON.parse( fs.readFileSync( namespaceOldPath ) );
-                }
-                catch (error) {
-                    this.emit( 'json_error', error.name, error.message );
-                    currentTranslations = {};
-                }
-            }
-            else {
-                oldTranslations = {};
-            }
-
-
-
             // merges existing translations with the new ones
             mergedTranslations = helpers.mergeHash( currentTranslations, translationsHash[namespace] );
-
-            // restore old translations if the key is empty
-            mergedTranslations.new = helpers.replaceEmpty( oldTranslations, mergedTranslations.new );
-
-            // merges former old translations with the new ones
-            mergedTranslations.old = _.extend( oldTranslations, mergedTranslations.old );
-
-
 
             // push files back to the stream
             mergedTranslationsFile = new File({
@@ -232,17 +208,10 @@ Parser.prototype._flush = function(done) {
               base: base,
               contents: new Buffer( JSON.stringify( mergedTranslations.new, null, 2 ) )
             });
-            mergedOldTranslationsFile = new File({
-              path: namespaceOldPath,
-              base: base,
-              contents: new Buffer( JSON.stringify( mergedTranslations.old, null, 2 ) )
-            });
 
             this.emit( 'writing', namespacePath );
-            this.emit( 'writing', namespaceOldPath );
 
             self.push( mergedTranslationsFile );
-            self.push( mergedOldTranslationsFile );
         }
     }
 
